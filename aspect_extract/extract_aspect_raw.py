@@ -13,69 +13,53 @@ import torch
 from vllm import LLM, SamplingParams
 from huggingface_hub import login
 
-# =========================
-# 全局配置（可调）
-# =========================
-K = 1                          # 多重采样轮数（保留参数，这里按 item 流程不依赖 K）
-consensus_tau_items = 5        # 共识阈值：某方面至少出现在 tau 个不同 item 中才保留
+K = 1                          
+consensus_tau_items = 5        
 
-aspect_max_tokens = 256        # 单 item 抽方面的生成上限（一般不需要太长）
-abs_max_tokens = 1024          # 摘要阶段生成上限
+aspect_max_tokens = 256        
+abs_max_tokens = 1024          
 max_model_len = 4096
-sample_fraction = 0.10         # 先对 item 下采样（0~1），生产/调试可改小以快速跑通
+sample_fraction = 0.10        
 random_seed = 123
 
-# —— 分桶阈值：判定“长 item”的总 token 数（按拼接后评论粗估）
 LONG_ITEM_TOKENS = 6000
 
-# 层次化摘要切块与合并
 CHUNK_TOKEN_BUDGET = 2000
 MERGE_TOKEN_BUDGET = 8192
 RESERVE_TOKENS = 80
 MAX_LEVELS = 5
 MAX_CHUNKS_PER_ITEM = 64
 
-# vLLM 外层批大小（一次性提交多少个 prompt）
-MAX_PROMPTS_PER_CALL_ABS    = 256  # 摘要（短 item / 长 item 块级 / 合并级）外层批
-MAX_PROMPTS_PER_CALL_MERGE  = 256  # 合并阶段外层批
-MAX_PROMPTS_PER_CALL_ASPECT = 256  # 抽方面阶段外层批
+MAX_PROMPTS_PER_CALL_ABS    = 256  
+MAX_PROMPTS_PER_CALL_MERGE  = 256  
+MAX_PROMPTS_PER_CALL_ASPECT = 256 
 
 SHOW_PROMPT_PROGRESS = True
 
-# =========================
-# 日志 & 登录
-# =========================
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-# 建议用环境变量：export HF_TOKEN=xxx；此处仅为示例
 login(token=os.getenv("HF_TOKEN", "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"))
 
-# =========================
-# GPU
-# =========================
+
 gpus = GPUtil.getAvailable(limit=2)
 if not gpus:
     raise RuntimeError("未找到可用的 GPU，请检查系统配置。")
 os.environ["CUDA_VISIBLE_DEVICES"] = ",".join(map(str, gpus))
 
-# =========================
-# 模型
-# =========================
 def init_model(model_name, model_path, batch_size=64, max_model_len=4096):
     llm = LLM(
         model=model_name,
         tensor_parallel_size=len(gpus),
         trust_remote_code=True,
         gpu_memory_utilization=0.95,
-        max_num_seqs=batch_size,    # 并发槽位上限（由 vLLM 控制）
+        max_num_seqs=batch_size,   
         max_model_len=max_model_len,
         enforce_eager=True
     )
     tokenizer = AutoTokenizer.from_pretrained(model_name, cache_dir=model_path, use_fast=False)
     return tokenizer, llm
 
-# =========================
-# 工具
-# =========================
+
 def clean_text(text: str) -> str:
     soup = BeautifulSoup(text or "", "html.parser")
     return soup.get_text(separator=" ").strip()
@@ -131,9 +115,6 @@ def parse_features_from_text(generated_text: str):
                 feats.append(feat)
     return feats
 
-# =========================
-# Prompts
-# =========================
 def build_abs_prompt(item_text_blob: str) -> str:
     return f"""
 You are a helpful assistant for review compression.
@@ -173,9 +154,6 @@ Notes:
 - If nothing is relevant, return [].
 """.strip()
 
-# =========================
-# 分桶：短/长 item
-# =========================
 def estimate_item_tokens(tokenizer, texts):
     joined = "\n\n".join(clean_text(t) for t in texts if t and t.strip())
     return count_tokens(tokenizer, joined)
@@ -187,9 +165,6 @@ def split_items_by_length(tokenizer, item_to_reviews, long_threshold=LONG_ITEM_T
         (short_ids if n_tok <= long_threshold else long_ids).append(iid)
     return short_ids, long_ids
 
-# =========================
-# 层次化摘要子组件
-# =========================
 def chunk_texts_by_token_budget(tokenizer, texts, per_chunk_budget_tokens):
     chunks, cur, cur_tokens = [], [], 0
     for t in texts:
@@ -221,7 +196,6 @@ def chunk_texts_by_token_budget(tokenizer, texts, per_chunk_budget_tokens):
         chunks.append(cur)
     return chunks
 
-# ---------- 短 item：跨 item 批式直接摘要 ----------
 def summarize_short_items_batched(tokenizer, llm, sampling_params_abs, item_to_reviews, item_ids):
     pfx = build_abs_prompt("")
     ids, prompts = [], []
@@ -258,7 +232,6 @@ def build_blocks_for_long_items(tokenizer, item_to_reviews, long_item_ids, per_c
     return flat_blocks
 
 def summarize_blocks_batched(tokenizer, llm, sampling_params_abs, flat_blocks):
-    """块级并发摘要：输入扁平块，输出 {iid: {bi: block_summary}}"""
     pfx = build_abs_prompt("")
     prompts, keys = [], []
     for iid, bi, blob in flat_blocks:
@@ -279,10 +252,6 @@ def summarize_blocks_batched(tokenizer, llm, sampling_params_abs, flat_blocks):
     return block_summ
 
 def merge_summaries_batched(tokenizer, llm, sampling_params_abs, per_item_segments, merge_budget=MERGE_TOKEN_BUDGET):
-    """
-    per_item_segments: {iid: [seg1, seg2, ...]}
-    并发合并一层，返回新的 {iid: [merged1, merged2, ...]}（可能每个 iid 变成更少段）
-    """
     jobs = []  # (iid, gi, merged_blob)
     for iid, segs in per_item_segments.items():
         groups = chunk_texts_by_token_budget(tokenizer, segs, per_chunk_budget_tokens=merge_budget)
@@ -310,10 +279,8 @@ def merge_summaries_batched(tokenizer, llm, sampling_params_abs, per_item_segmen
     return per_item_next
 
 def summarize_long_items_hier_batched(tokenizer, llm, sampling_params_abs, item_to_reviews, long_item_ids):
-    # 1) 扁平化块，块级并发摘要
     flat_blocks = build_blocks_for_long_items(tokenizer, item_to_reviews, long_item_ids)
     block_summ  = summarize_blocks_batched(tokenizer, llm, sampling_params_abs, flat_blocks)  # {iid: {bi: text}}
-    # 2) 逐层并发合并，直到每个 iid 只剩 1 段或达到 MAX_LEVELS
     per_item_segments = {iid: [txt for _, txt in sorted(d.items())] for iid, d in block_summ.items()}
     level = 1
     while level <= MAX_LEVELS:
@@ -323,26 +290,15 @@ def summarize_long_items_hier_batched(tokenizer, llm, sampling_params_abs, item_
             tokenizer, llm, sampling_params_abs, per_item_segments, merge_budget=MERGE_TOKEN_BUDGET
         )
         level += 1
-    # 3) 收尾：取每个 iid 的第一段作为最终摘要
     abstracts = {iid: (segs[0] if segs else "") for iid, segs in per_item_segments.items()}
     return abstracts
 
-# =========================
-# 逐 item 抽方面（批量并发）
-# =========================
 def build_item_aspect_prompt_safe(tokenizer, abstract_text: str) -> str:
-    # 保险截断（几乎用不到，但留着更稳）
     pfx = build_item_aspect_prompt("")
     payload = truncate_to_fit(tokenizer, prefix=pfx, payload=abstract_text, budget_tokens=max_model_len)
     return build_item_aspect_prompt(payload)
 
 def extract_item_aspects_batched(tokenizer, llm, sampling_params_aspect, item_abstracts):
-    """
-    输入：{item_id: abstract_text}
-    输出：(item_aspects, aspect_item_dfreq)
-      - item_aspects: {item_id: [aspect1, aspect2, ...]}
-      - aspect_item_dfreq: Counter，记录每个方面出现在多少个不同 item 中
-    """
     ids, prompts = [], []
     for iid, abst in item_abstracts.items():
         if not abst or not abst.strip():
@@ -376,9 +332,7 @@ def extract_item_aspects_batched(tokenizer, llm, sampling_params_aspect, item_ab
             dfreq[f] += 1
     return item_aspects, dfreq
 
-# =========================
-# 主流程
-# =========================
+
 if __name__ == "__main__":
     random.seed(random_seed)
     model_name = 'meta-llama/Llama-3.1-8B-Instruct'
@@ -389,7 +343,6 @@ if __name__ == "__main__":
     sampling_params_abs = SamplingParams(temperature=0.2, top_p=0.9, max_tokens=abs_max_tokens)
     sampling_params_aspect = SamplingParams(temperature=0.1, top_p=0.9, max_tokens=aspect_max_tokens)
 
-    # ===== 读取数据 =====
     data_path = '/home/zheng/reviewgpt/aspect_extraction/filtered_yelp_restaurant_reviews.jsonl'
     reviews = []
     with open(data_path, 'r', encoding='utf-8') as f:
@@ -406,8 +359,6 @@ if __name__ == "__main__":
                 continue
 
     logging.info(f"总评论条数: {len(reviews)}")
-
-    # ===== 按 item 聚合 =====
     item_to_reviews_all = defaultdict(list)
     for r in reviews:
         item_to_reviews_all[r["asin"]].append(r["text"])
@@ -415,51 +366,40 @@ if __name__ == "__main__":
     all_items = list(item_to_reviews_all.keys())
     logging.info(f"唯一 item 数: {len(all_items)}")
 
-    # （可选）对 item 再次总体下采样
     if sample_fraction < 1.0:
         keep_n = max(1, int(len(all_items) * sample_fraction))
         all_items = random.sample(all_items, keep_n)
         item_to_reviews_all = {iid: item_to_reviews_all[iid] for iid in all_items}
         logging.info(f"下采样后 item 数: {len(all_items)}")
 
-    # ===== 分桶：短 / 长 =====
     short_ids, long_ids = split_items_by_length(tokenizer, item_to_reviews_all, long_threshold=LONG_ITEM_TOKENS)
     logging.info(f"短 item: {len(short_ids)}，长 item: {len(long_ids)}（阈值 LONG_ITEM_TOKENS={LONG_ITEM_TOKENS}）")
 
-    # ===== 摘要：短 item（跨 item 批）=====
     abs_short = summarize_short_items_batched(
         tokenizer, llm, sampling_params_abs, item_to_reviews_all, short_ids
     )
 
-    # ===== 摘要：长 item（块级并发 + 层级并发合并，且跨 item 批）=====
     abs_long = summarize_long_items_hier_batched(
         tokenizer, llm, sampling_params_abs, item_to_reviews_all, long_ids
     )
 
-    # 合并为“每个 item 恰好 1 条摘要”
     item_abstracts = {**abs_short, **abs_long}
     logging.info(f"得到摘要的 item 数: {len(item_abstracts)}")
 
-    # ===== 抽方面：逐 item 批量并发 =====
     item_aspects, aspect_item_dfreq = extract_item_aspects_batched(
         tokenizer, llm, sampling_params_aspect, item_abstracts
     )
 
-    # ===== 共识：基于“出现在多少个 item 中” =====
     consensus_kept = sorted([a for a, d in aspect_item_dfreq.items() if d >= consensus_tau_items])
     logging.info(f"满足共识阈值(≥{consensus_tau_items} 个 item)的方面数: {len(consensus_kept)}")
 
-    # ===== 输出与保存 =====
     out_dir = '/home/zheng/reviewgpt/aspect_extraction'
     os.makedirs(out_dir, exist_ok=True)
 
-    # 每个 item 的方面
     path_item_aspects = os.path.join(out_dir, "item_aspects.json")
     with open(path_item_aspects, "w", encoding="utf-8") as f:
         json.dump(item_aspects, f, ensure_ascii=False, indent=2)
 
-    # 方面的 item 文档频（出现于多少个 item）
-    # 注意：Counter 不能直接 JSON 序列化，这里转成普通 dict
     path_dfreq = os.path.join(out_dir, "aspect_dfreq.json")
     with open(path_dfreq, "w", encoding="utf-8") as f:
         json.dump({
