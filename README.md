@@ -1,6 +1,6 @@
-# HADSF: Hyper-Adaptive Dual-Stage Semantic Framework
+# HADSF: Aspect Aware Semantic Control for Explainable Recommendation
 
-The official repo for our paper **HADSF: Hyper-Adaptive Dual-Stage Semantic Framework for Explainable Recommendation**.
+The official repo for our paper **HADSF: Aspect Aware Semantic Control for Explainable Recommendation**.
 
 ## Initial Setup
 
