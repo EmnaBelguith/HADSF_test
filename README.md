@@ -27,7 +27,7 @@ It also includes two **hallucination quantification metrics**:
 ## Data
 
 A processed example dataset is available for reference:  
-👉 Google Drive: https://drive.google.com/file/d/1fK1WOzvBEmgnTt9dWWb2KtYusG9VBgeG/view?usp=sharing
+👉 Google Drive: [https://drive.google.com/file/d/1fK1WOzvBEmgnTt9dWWb2KtYusG9VBgeG/view?usp=sharing](https://drive.google.com/drive/folders/1tt2K8fEDlk85ToFYq8MEERN9ldyE5Oht?usp=drive_link)
 
 ---
 
