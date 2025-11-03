@@ -1,6 +1,6 @@
 # HADSF: Aspect Aware Semantic Control for Explainable Recommendation
 
-The official repo for our paper **HADSF: Aspect Aware Semantic Control for Explainable Recommendation**.
+The official repo for our paper **HADSF: Aspect Aware Semantic Control for Explainable Recommendation** https://arxiv.org/abs/2510.26994.
 
 ## Initial Setup
 
