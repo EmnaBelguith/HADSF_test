@@ -230,7 +230,7 @@ def compute_ofr_parallel(jsonl_path: str, n_procs: int = None, delta: int = 2):
 # ------------------- 3. 调用示例 --------------------
 if __name__ == "__main__":
     jsonl_file = (
-        "/home/zheng/RatingTopicGraph/filtered_Industrial_and_Scientific_output_aspect/filtered_Industrial_and_Scientific_output_aspect.jsonl"
+        "/home/infres/belguith/HADSF_test/output/reviews_with_aspects.jsonl"
     )
     # n_procs：建议与可见 GPU 数一致；Δ 可按需要调整
     compute_ofr_parallel(jsonl_file, n_procs=8, delta=2)

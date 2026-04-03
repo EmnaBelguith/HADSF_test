@@ -38,7 +38,7 @@ SHOW_PROMPT_PROGRESS = True
 
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-login(token=os.getenv("HF_TOKEN", "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"))
+# login(token=os.getenv("HF_TOKEN", "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"))
 
 
 gpus = GPUtil.getAvailable(limit=2)
@@ -56,7 +56,7 @@ def init_model(model_name, model_path, batch_size=64, max_model_len=4096):
         max_model_len=max_model_len,
         enforce_eager=True
     )
-    tokenizer = AutoTokenizer.from_pretrained(model_name, cache_dir=model_path, use_fast=False)
+    tokenizer = AutoTokenizer.from_pretrained(model_name, cache_dir="/home/infres/belguith/.cache/huggingface", use_fast=False)
     return tokenizer, llm
 
 
@@ -343,16 +343,16 @@ if __name__ == "__main__":
     sampling_params_abs = SamplingParams(temperature=0.2, top_p=0.9, max_tokens=abs_max_tokens)
     sampling_params_aspect = SamplingParams(temperature=0.1, top_p=0.9, max_tokens=aspect_max_tokens)
 
-    data_path = '/home/zheng/reviewgpt/aspect_extraction/filtered_yelp_restaurant_reviews.jsonl'
+    data_path = '/home/infres/belguith/HADSF_test/data/filtered_Musical_Instruments_output.jsonl'
     reviews = []
     with open(data_path, 'r', encoding='utf-8') as f:
         for line in f:
             try:
                 r = json.loads(line.strip())
-                rating = r.get("stars")
+                rating = r.get("rating")
                 text   = r.get("text", "")
-                asin   = r.get("business_id")  # item id
-                uid    = r.get("user_id")
+                asin   = r.get("item")  # item id
+                uid    = r.get("user")
                 if asin and text and str(text).strip():
                     reviews.append({"rating": rating, "text": text, "asin": asin, "user_id": uid})
             except json.JSONDecodeError:
@@ -393,7 +393,7 @@ if __name__ == "__main__":
     consensus_kept = sorted([a for a, d in aspect_item_dfreq.items() if d >= consensus_tau_items])
     logging.info(f"满足共识阈值(≥{consensus_tau_items} 个 item)的方面数: {len(consensus_kept)}")
 
-    out_dir = '/home/zheng/reviewgpt/aspect_extraction'
+    out_dir = '/home/infres/belguith/HADSF_test/output'
     os.makedirs(out_dir, exist_ok=True)
 
     path_item_aspects = os.path.join(out_dir, "item_aspects.json")

@@ -45,9 +45,9 @@ def config():
     # args.dataset_path = '/home/d1/shuaijie/data/Digital_Music_5/Digital_Music_5.json'
     # args.review_feat_size = 64
     # args.gcn_dropout = 0.7
-    # args.device = 1
+    args.device = 0
     # args.num_layers = 2
-    # args.batch_size = 10000
+    args.batch_size = 512
 
     # args.dataset_name = 'Toys_and_Games_5'
     # args.dataset_path = '/home/d1/shuaijie/data/Toys_and_Games_5/Toys_and_Games_5.json'
@@ -56,32 +56,34 @@ def config():
     # args.ed_alpha = 0.1
     # args.device = 0
     # args.num_layers = 2
-    # args.batch_size = 10000
+    args.batch_size = 512
     # args.epoch = 2000
 
     # args.dataset_name = 'Sports_and_Outdoors_5'
     # args.dataset_path = '/home/d1/shuaijie/data/Sports_and_Outdoors_5/Sports_and_Outdoors_5.json'
 
-    args.dataset_name = 'Musical_Instruments'
-    args.dataset_path = '/home/zheng/RatingTopicGraph/filtered_Musical_Instruments_output/filtered_Musical_Instruments_output.jsonl'
-    args.dataset_name = 'Musical_Instruments_aspect'
-    args.dataset_path = '/home/zheng/RatingTopicGraph/filtered_Musical_Instruments_output_aspect/filtered_Musical_Instruments_output.jsonl'
+ #   args.dataset_name = 'Musical_Instruments'
+ #   args.dataset_path = '/home/zheng/RatingTopicGraph/filtered_Musical_Instruments_output/filtered_Musical_Instruments_output.jsonl'
+ #   args.dataset_name = 'Musical_Instruments_aspect'
+ #   args.dataset_path = '/home/zheng/RatingTopicGraph/filtered_Musical_Instruments_output_aspect/filtered_Musical_Instruments_output.jsonl'
  #   args.dataset_name = 'Industrial_and_Scientific'
  #   args.dataset_path = '/home/zheng/RatingTopicGraph/filtered_Industrial_and_Scientific_output/filtered_Industrial_and_Scientific_output.jsonl' # 修改为您的 JSONL 文件路径
  #   args.dataset_name = 'yelp_reviews'
  #   args.dataset_path = '/home/zheng/RatingTopicGraph/filtered_yelp_reviews_output/filtered_yelp_restaurant_reviews_output.jsonl' # 修改为您的 JSONL 文件路径
-    args.dataset_name = 'Industrial_and_Scientific_raw_part2'
-    args.dataset_path = '/home/zheng/RatingTopicGraph/filtered_Industrial_and_Scientific_aspect_raw_10-50/filtered_Industrial_and_Scientific_aspect_raw_10-50.jsonl' # 修改为您的 JSONL 文件路径
+ #   args.dataset_name = 'Industrial_and_Scientific_raw_part2'
+ #  args.dataset_path = '/home/zheng/RatingTopicGraph/filtered_Industrial_and_Scientific_aspect_raw_10-50/filtered_Industrial_and_Scientific_aspect_raw_10-50.jsonl' # 修改为您的 JSONL 文件路径
 
-
+  # Nouveaux chemins (à ajouter)
+    args.dataset_name = 'Musical_Instruments_HADSF'
+    args.dataset_path = '/home/infres/belguith/HADSF_test/output/reviews_with_aspects.jsonl'
     args.gcn_dropout = 0.8
     args.ed_alpha = 2.0
-    args.device = 5
+    args.device = 0
     args.num_layers = 2
-    args.batch_size = 1000
+    args.batch_size = 512
 
-    # args.dataset_name = 'Health_and_Personal_Care_5'
-    # args.dataset_path = '/home/d1/shuaijie/data/Health_and_Personal_Care_5/Health_and_Personal_Care_5.json'
+    #     # args.dataset_name = 'Health_and_Personal_Care_5'
+    #     # args.dataset_path = '/home/d1/shuaijie/data/Health_and_Personal_Care_5/Health_and_Personal_Care_5.json'
     # args.gcn_dropout = 0.7
     # args.device = 0
     # args.epoch = 200
@@ -89,14 +91,17 @@ def config():
     # args.dataset_name = 'Yelp2013'
     # args.dataset_path = '/home/d1/shuaijie/data/yelp-recsys-2013/yelp2013.json'
     # args.gcn_dropout = 0.7
-    # args.device = 1
+    args.device = 0
+    args.dataset_name = 'Musical_Instruments_HADSF'
+    args.dataset_path = '/home/infres/belguith/HADSF_test/output/reviews_with_aspects.jsonl'
+    args.gcn_dropout = 0.8
+    args.ed_alpha = 2.0
     # args.epoch = 800
     # args.num_layers = 2
 
     # args.dataset_name = 'Yelp1'
     # args.dataset_path = '/home/d1/shuaijie/data/yelp1/yelp2013.json'
     # args.gcn_dropout = 0.8
-    # args.device = 1
     # args.epoch = 300
 
     # args.device = torch.device(args.device) if args.device >= 0 else torch.device('cpu')

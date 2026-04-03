@@ -27,9 +27,29 @@ logging.basicConfig(
 )
 
 A_STAR = [
-    "ease of use", "sound quality", "value for money",
-    "durability", "compatibility", "design", "customer support",
-    "portability", "performance"
+    "accessories", "accuracy", "adjustability", "affordability", "appearance",
+    "assembly", "audio quality", "battery life", "bluetooth connectivity",
+    "build quality", "color", "comfort", "compact design", "compactness",
+    "compatibility", "connectivity", "connectivity issues", "construction",
+    "convenience", "craftsmanship", "customer service", "customer support",
+    "customization", "design", "disappointment", "distortion", "durability",
+    "durable", "ease of assembly", "ease of installation", "ease of use",
+    "easy to use", "effectiveness", "feature", "features", "finish", "fit",
+    "flexibility", "frets", "functionality", "game changer", "good quality",
+    "good value", "great value", "guitar compatibility", "high quality",
+    "highly recommended", "installation", "instructions", "interference",
+    "lightweight", "long-lasting", "long-term reliability", "longevity",
+    "loudness", "materials", "no issues", "noise", "noise reduction",
+    "packaging", "padding", "performance", "playability", "poor quality",
+    "portability", "price", "price value", "product quality", "professional use",
+    "protection", "quality", "quality control", "quality issues", "range",
+    "reasonable price", "recommendation", "reliability", "reliable",
+    "remote control", "satisfaction", "satisfied", "sensitivity", "service",
+    "setup", "size", "sound", "sound quality", "stability", "strings",
+    "sturdiness", "sturdy", "sturdy build", "suitability", "tone", "tuners",
+    "tuning", "tuning issues", "usability", "usefulness", "user satisfaction",
+    "value", "value for money", "value for price", "versatility", "volume",
+    "volume control", "weight"
 ]
 A_STAR_SET = {a.lower() for a in A_STAR}
 
@@ -82,7 +102,7 @@ def to_datetime_utc(value):
     return None
 
 os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
-gpus = GPUtil.getAvailable(order="first", limit=4)  
+gpus = GPUtil.getAvailable(order="first", limit=1)  
 # gpus = [4, 5, 6, 7]  #
 if not gpus:
     raise RuntimeError("未找到可用的 GPU，请检查系统配置。")
@@ -90,7 +110,7 @@ gpus_str = ",".join(map(str, gpus))
 
 os.environ["CUDA_VISIBLE_DEVICES"] = gpus_str
 
-login(token='')
+# login(token='')
 class SubTerm(BaseModel):
     feature: str
     opinion: Optional[str] = None
@@ -102,11 +122,12 @@ class Aspect(BaseModel):
 
 def init_local_llama_model(model_name='', model_path='', batch_size=16, max_num_batched_tokens=1024):
     llm = LLM(
+        max_model_len=4096,
         model=model_name,
         tensor_parallel_size=len(gpus),
         trust_remote_code=True,
         dtype="float16",  
-        gpu_memory_utilization=0.95,  
+        gpu_memory_utilization=0.7,  
         max_num_seqs=batch_size,  
         max_num_batched_tokens=max_num_batched_tokens,  
         enforce_eager=True
@@ -383,9 +404,9 @@ def process_reviews(review_list: List[dict], processed_counter: Counter, tokeniz
                 hist.update(str(review["user_id"]), str(review["asin"]), features_in_this_review)
 
 if __name__ == "__main__":
-    model_name = ''  
-    model_path = '' 
-    batch_size = 64  
+    model_name = 'meta-llama/Llama-3.1-8B-Instruct'  
+    model_path = '/home/infres/belguith/.cache/huggingface' 
+    batch_size = 32  
     max_num_batched_tokens = 2048
 
     tokenizer, llm = init_local_llama_model(model_name, model_path, batch_size=batch_size, max_num_batched_tokens=max_num_batched_tokens)
@@ -396,8 +417,8 @@ if __name__ == "__main__":
         max_tokens=200
     )
 
-    data_path = '/home/zheng/filtered_Musical_Instruments.jsonl'
-    output_path = '/home/zheng/filtered_Musical_Instruments_out.jsonl'
+    data_path = '/home/infres/belguith/HADSF_test/data/filtered_Musical_Instruments_output.jsonl'
+    output_path = '/home/infres/belguith/HADSF_test/output/reviews_with_aspects.jsonl'
 
     print("正在加载已处理的条目...")
     processed_counter = load_processed_entries(output_path)
@@ -418,8 +439,8 @@ if __name__ == "__main__":
                 filtered_review = {
                     "rating": original_review.get("rating"),
                     "text": original_review.get("text", ""),
-                    "asin": original_review.get("asin"),
-                    "user_id": original_review.get("user_id"),
+                    "asin": original_review.get("item"),
+                    "user_id": original_review.get("user"),
                     "datetime": original_review.get("datetime"), 
                 }
                 if all(filtered_review.values()):
